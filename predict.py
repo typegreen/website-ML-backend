@@ -17,7 +17,7 @@ if os.path.exists(MODEL_PATH):
 CLASS_NAMES = ['diseased', 'healthy']
 
 def prepare_image(img_file):
-    img = image.load_img(img_file, target_size=(128, 128))
+    img = image.load_img(img_file.stream, target_size=(128, 128))  # ✅ Use .stream
     img_array = image.img_to_array(img)
     img_array = np.expand_dims(img_array, axis=0) / 255.0
     return img_array
