@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
@@ -7,6 +8,7 @@ import os
 from io import BytesIO
 
 app = Flask(__name__)
+CORS(app)
 
 MODEL_DIR = "model"
 MODEL_PATH = os.getenv("MODEL_PATH", f"{MODEL_DIR}/vgg16_rgb_final_model.h5")
