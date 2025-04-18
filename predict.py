@@ -4,7 +4,7 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.preprocessing import image
 import numpy as np
 import os
-from io import BytesIO  # <-- Import this to fix image stream issue
+from io import BytesIO
 
 app = Flask(__name__)
 
@@ -15,13 +15,10 @@ model = None
 if os.path.exists(MODEL_PATH):
     model = load_model(MODEL_PATH)
 
-CLASS_NAMES = ['diseased', 'healthy']
-
 def prepare_image(img_file):
-    # Convert to BytesIO for keras compatibility
-    img = image.load_img(BytesIO(img_file.read()), target_size=(128, 128))
-    img_array = image.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0) / 255.0
+    img = image.load_img(BytesIO(img_file.read()), target_size=(128, 128), color_mode="rgb")
+    img_array = image.img_to_array(img).astype('float32') / 255.0
+    img_array = np.expand_dims(img_array, axis=0)
     return img_array
 
 @app.route("/predict", methods=["POST"])
@@ -36,13 +33,15 @@ def predict():
     img_file = request.files["image"]
     img_array = prepare_image(img_file)
 
-    prediction = model.predict(img_array)
-    class_idx = int(np.argmax(prediction))
-    confidence = float(np.max(prediction))
+    # ✅ Apply threshold-based binary classification
+    pred_prob = float(model.predict(img_array)[0][0])
+    threshold = 0.5
+    predicted_class = "healthy" if pred_prob >= threshold else "diseased"
+    confidence = pred_prob if pred_prob >= threshold else 1 - pred_prob
 
     return jsonify({
-        "class": CLASS_NAMES[class_idx],
-        "confidence": confidence
+        "class": predicted_class,
+        "confidence": round(confidence, 4)  # return cleaner float
     })
 
 if __name__ == "__main__":
