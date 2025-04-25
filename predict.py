@@ -13,9 +13,7 @@ CORS(app)
 MODEL_DIR = "model"
 MODEL_PATH = os.getenv("MODEL_PATH", f"{MODEL_DIR}/vgg16_rgb_final_model.h5")
 
-model = None
-if os.path.exists(MODEL_PATH):
-    model = load_model(MODEL_PATH)
+model = load_model(MODEL_PATH) if os.path.exists(MODEL_PATH) else None
 
 def prepare_image(img_file):
     img = image.load_img(BytesIO(img_file.read()), target_size=(128, 128), color_mode="rgb")
@@ -25,17 +23,23 @@ def prepare_image(img_file):
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    global model
     if model is None:
-        return jsonify({"error": "Model not loaded. Upload it via /upload-model first."}), 500
+        return jsonify({"error": "Model not loaded."}), 500
 
     if "image" not in request.files:
         return jsonify({"error": "No image uploaded"}), 400
 
     img_file = request.files["image"]
-    img_array = prepare_image(img_file)
+    img_array, raw_array = prepare_image(img_file)
 
-    # ✅ Apply threshold-based binary classification
+    # ✅ Validate NDVI image
+    if not is_valid_rgb_ndvi(raw_array):
+        return jsonify({
+            "class": "Invalid",
+            "confidence": 0,
+            "message": "⚠️ The uploaded image does not match the expected NDVI RGB pattern for rice crop leaves."
+        }), 200
+
     pred_prob = float(model.predict(img_array)[0][0])
     threshold = 0.5
     predicted_class = "healthy" if pred_prob >= threshold else "diseased"
@@ -43,7 +47,7 @@ def predict():
 
     return jsonify({
         "class": predicted_class,
-        "confidence": round(confidence, 4)  # return cleaner float
+        "confidence": round(confidence, 4)
     })
 
 if __name__ == "__main__":
