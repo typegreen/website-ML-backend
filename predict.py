@@ -21,7 +21,7 @@ def prepare_image(img_file):
     return np.expand_dims(img_array, axis=0), img_array  # Normalized + raw
 
 def is_valid_rgb_ndvi(image_array):
-    if image_array.shape != (128, 128, 3):  # ✅ Adjusted shape check
+    if image_array.shape != (256, 256, 3):  # ✅ Adjusted shape check
         return False
 
     mean_val = np.mean(image_array * 255.0)
